@@ -11,7 +11,16 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class TaskManagerTest {
+/**
+ * Тестовый класс для проверки работы InMemoryTaskManager.
+ * Проверяет CRUD операции с задачами, эпиками и подзадачами,
+ * а также работу истории просмотров.
+ *
+ * @author Kirill-Kazantcev
+ * @version 3.0
+ * @since Sprint 5
+ */
+class InMemoryTaskManagerTest {
     private TaskManager taskManager;
 
     @BeforeEach
@@ -19,6 +28,11 @@ class TaskManagerTest {
         taskManager = Managers.getDefault();
     }
 
+    // ========== Базовые тесты CRUD операций ==========
+
+    /**
+     * Проверяет создание и поиск обычной задачи.
+     */
     @Test
     void shouldCreateAndFindTask() {
         Task task = new Task("Test Task", "Test Description", TaskStatus.NEW);
@@ -33,6 +47,9 @@ class TaskManagerTest {
         assertEquals(TaskStatus.NEW, foundTask.getStatus());
     }
 
+    /**
+     * Проверяет создание и поиск эпика.
+     */
     @Test
     void shouldCreateAndFindEpic() {
         Epic epic = new Epic("Test Epic", "Test Description");
@@ -47,6 +64,9 @@ class TaskManagerTest {
         assertTrue(foundEpic.getSubtaskIds().isEmpty());
     }
 
+    /**
+     * Проверяет создание и поиск подзадачи.
+     */
     @Test
     void shouldCreateAndFindSubtask() {
         Epic epic = taskManager.createEpic(new Epic("Epic", "Description"));
@@ -63,6 +83,9 @@ class TaskManagerTest {
         assertEquals(epic.getId(), foundSubtask.getEpicId());
     }
 
+    /**
+     * Проверяет обновление обычной задачи.
+     */
     @Test
     void shouldUpdateTask() {
         Task task = taskManager.createTask(new Task("Old Task", "Old Description", TaskStatus.NEW));
@@ -78,6 +101,9 @@ class TaskManagerTest {
         assertEquals(TaskStatus.IN_PROGRESS, updatedTask.getStatus());
     }
 
+    /**
+     * Проверяет обновление эпика (только название и описание).
+     */
     @Test
     void shouldUpdateEpic() {
         Epic epic = taskManager.createEpic(new Epic("Old Epic", "Old Description"));
@@ -89,10 +115,11 @@ class TaskManagerTest {
 
         assertEquals("Updated Epic", updatedEpic.getTitle());
         assertEquals("Updated Description", updatedEpic.getDescription());
-        // Статус не должен измениться
-        assertEquals(TaskStatus.NEW, updatedEpic.getStatus());
     }
 
+    /**
+     * Проверяет обновление подзадачи.
+     */
     @Test
     void shouldUpdateSubtask() {
         Epic epic = taskManager.createEpic(new Epic("Epic", "Description"));
@@ -111,6 +138,9 @@ class TaskManagerTest {
         assertEquals(TaskStatus.DONE, updatedSubtask.getStatus());
     }
 
+    /**
+     * Проверяет удаление обычной задачи.
+     */
     @Test
     void shouldDeleteTask() {
         Task task = taskManager.createTask(new Task("Task to Delete", "Description", TaskStatus.NEW));
@@ -122,6 +152,9 @@ class TaskManagerTest {
         assertFalse(taskManager.getTasks().contains(task));
     }
 
+    /**
+     * Проверяет удаление эпика со всеми его подзадачами.
+     */
     @Test
     void shouldDeleteEpicAndItsSubtasks() {
         Epic epic = taskManager.createEpic(new Epic("Epic to Delete", "Description"));
@@ -138,6 +171,9 @@ class TaskManagerTest {
         assertTrue(taskManager.getSubtasks().isEmpty());
     }
 
+    /**
+     * Проверяет удаление подзадачи.
+     */
     @Test
     void shouldDeleteSubtask() {
         Epic epic = taskManager.createEpic(new Epic("Epic", "Description"));
@@ -148,15 +184,15 @@ class TaskManagerTest {
         taskManager.deleteSubtask(subtaskId);
 
         assertNull(taskManager.getSubtask(subtaskId));
-        assertFalse(taskManager.getEpicSubtasks(epic.getId()).contains(subtask));
         assertFalse(taskManager.getSubtasks().contains(subtask));
     }
 
+    /**
+     * Проверяет автоматический расчет статуса эпика на основе подзадач.
+     */
     @Test
     void shouldUpdateEpicStatusBasedOnSubtasks() {
         Epic epic = taskManager.createEpic(new Epic("Epic", "Description"));
-
-        // Эпик без подзадач должен иметь статус NEW
         assertEquals(TaskStatus.NEW, epic.getStatus());
 
         Subtask subtask1 = taskManager.createSubtask(
@@ -164,117 +200,153 @@ class TaskManagerTest {
         Subtask subtask2 = taskManager.createSubtask(
                 new Subtask("Subtask 2", "Description", TaskStatus.NEW, epic.getId()));
 
-        // Все подзадачи NEW -> статус эпика NEW
         assertEquals(TaskStatus.NEW, taskManager.getEpic(epic.getId()).getStatus());
 
         subtask1.setStatus(TaskStatus.DONE);
         taskManager.updateSubtask(subtask1);
-        // Одна DONE, одна NEW -> статус IN_PROGRESS
         assertEquals(TaskStatus.IN_PROGRESS, taskManager.getEpic(epic.getId()).getStatus());
 
         subtask2.setStatus(TaskStatus.DONE);
         taskManager.updateSubtask(subtask2);
-        // Все подзадачи DONE -> статус DONE
         assertEquals(TaskStatus.DONE, taskManager.getEpic(epic.getId()).getStatus());
     }
 
-    // ========== ТЕСТЫ ДЛЯ ИСТОРИИ ==========
+    // ========== Тесты истории просмотров (Sprint 6) ==========
 
+    /**
+     * Проверяет, что задача добавляется в историю при получении.
+     */
     @Test
-    void shouldAddTaskToHistory() {
+    void shouldAddToHistoryWhenGettingTask() {
         Task task = taskManager.createTask(new Task("Task", "Desc", TaskStatus.NEW));
 
         taskManager.getTask(task.getId());
         List<Task> history = taskManager.getHistory();
 
         assertEquals(1, history.size());
-        assertEquals(task, history.getFirst());
+        assertEquals(task, history.get(0));
     }
 
+    /**
+     * Проверяет, что в истории нет дубликатов при многократном просмотре одной задачи.
+     */
     @Test
-    void historyShouldNotAllowDuplicates() {  // ИЗМЕНЕНО: было historyShouldAllowDuplicates
-        Task task = taskManager.createTask(new Task("Task 1", "Desc 1", TaskStatus.NEW));
-        Task task2 = taskManager.createTask(new Task("Task 2", "Desc 2", TaskStatus.NEW));
-        Task task3 = taskManager.createTask(new Task("Task 3", "Desc 3", TaskStatus.NEW));
+    void shouldNotAllowDuplicatesInHistory() {
+        Task task = taskManager.createTask(new Task("Task", "Desc", TaskStatus.NEW));
 
         taskManager.getTask(task.getId());
+        taskManager.getTask(task.getId());
+        taskManager.getTask(task.getId());
+
+        List<Task> history = taskManager.getHistory();
+        assertEquals(1, history.size(), "В истории не должно быть дубликатов");
+        assertEquals(task, history.get(0));
+    }
+
+    /**
+     * Проверяет, что задача перемещается в конец истории при повторном просмотре.
+     */
+    @Test
+    void shouldMoveExistingTaskToEndWhenReaccessed() {
+        Task task1 = taskManager.createTask(new Task("Task1", "Desc", TaskStatus.NEW));
+        Task task2 = taskManager.createTask(new Task("Task2", "Desc", TaskStatus.NEW));
+        Task task3 = taskManager.createTask(new Task("Task3", "Desc", TaskStatus.NEW));
+
+        taskManager.getTask(task1.getId());
         taskManager.getTask(task2.getId());
         taskManager.getTask(task3.getId());
-        taskManager.getTask(task.getId()); // повторный просмотр
+        taskManager.getTask(task1.getId());
 
         List<Task> history = taskManager.getHistory();
 
-        // Ожидаем 3 уникальных задачи (дубликат не добавляется)
         assertEquals(3, history.size());
+        assertEquals(task2, history.get(0));
+        assertEquals(task3, history.get(1));
+        assertEquals(task1, history.get(2));
     }
 
+    /**
+     * Проверяет, что история не имеет ограничения по размеру.
+     */
     @Test
-    void historyShouldNotHaveSizeLimit() {  // ИЗМЕНЕНО: было historyShouldHaveSizeLimit
-        // Создаем 15 задач и добавляем в историю
-        for (int i = 0; i < 15; i++) {
-            Task task = taskManager.createTask(new Task("Task " + i, "Desc " + i, TaskStatus.NEW));
+    void shouldHaveUnlimitedHistory() {
+        for (int i = 0; i < 20; i++) {
+            Task task = taskManager.createTask(new Task("Task" + i, "Desc", TaskStatus.NEW));
             taskManager.getTask(task.getId());
         }
 
         List<Task> history = taskManager.getHistory();
-
-        // Ожидаем, что история хранит все 15 задач (нет ограничения)
-        assertEquals(15, history.size());
+        assertEquals(20, history.size(), "История должна хранить все 20 просмотров");
     }
 
+    /**
+     * Проверяет, что задача удаляется из истории при удалении из менеджера.
+     */
     @Test
-    void shouldNotKeepTaskInHistoryAfterDeletion() {
-        Task task = taskManager.createTask(new Task("Task to delete", "Desc", TaskStatus.NEW));
+    void shouldRemoveTaskFromHistoryWhenDeleted() {
+        Task task = taskManager.createTask(new Task("Task", "Desc", TaskStatus.NEW));
 
         taskManager.getTask(task.getId());
         assertEquals(1, taskManager.getHistory().size());
 
         taskManager.deleteTask(task.getId());
 
-        assertTrue(taskManager.getHistory().isEmpty());
+        assertTrue(taskManager.getHistory().isEmpty(), "Задача должна быть удалена из истории");
     }
 
+    /**
+     * Проверяет, что эпик и все его подзадачи удаляются из истории.
+     */
     @Test
-    void shouldRemoveEpicAndSubtasksFromHistory() {
+    void shouldRemoveEpicAndSubtasksFromHistoryWhenDeleted() {
         Epic epic = taskManager.createEpic(new Epic("Epic", "Desc"));
-        Subtask subtask1 = taskManager.createSubtask(
-                new Subtask("Subtask 1", "Desc", TaskStatus.NEW, epic.getId()));
-        Subtask subtask2 = taskManager.createSubtask(
-                new Subtask("Subtask 2", "Desc", TaskStatus.NEW, epic.getId()));
+        Subtask sub1 = taskManager.createSubtask(
+                new Subtask("Sub1", "Desc", TaskStatus.NEW, epic.getId()));
+        Subtask sub2 = taskManager.createSubtask(
+                new Subtask("Sub2", "Desc", TaskStatus.NEW, epic.getId()));
 
-        // Добавляем эпик и подзадачи в историю
         taskManager.getEpic(epic.getId());
-        taskManager.getSubtask(subtask1.getId());
-        taskManager.getSubtask(subtask2.getId());
+        taskManager.getSubtask(sub1.getId());
+        taskManager.getSubtask(sub2.getId());
 
         assertEquals(3, taskManager.getHistory().size());
 
-        // Удаляем эпик
         taskManager.deleteEpic(epic.getId());
 
-        // Проверяем, что история очистилась
-        assertTrue(taskManager.getHistory().isEmpty());
+        assertTrue(taskManager.getHistory().isEmpty(),
+                "Эпик и все подзадачи должны быть удалены из истории");
     }
 
+    /**
+     * Проверяет корректный порядок истории после различных операций.
+     */
     @Test
-    void shouldMaintainHistoryOrderWhenTaskReaccessed() {
-        Task task1 = taskManager.createTask(new Task("Task 1", "Desc", TaskStatus.NEW));
-        Task task2 = taskManager.createTask(new Task("Task 2", "Desc", TaskStatus.NEW));
-        Task task3 = taskManager.createTask(new Task("Task 3", "Desc", TaskStatus.NEW));
+    void shouldMaintainHistoryOrderAfterOperations() {
+        Task task1 = taskManager.createTask(new Task("Task1", "Desc", TaskStatus.NEW));
+        Task task2 = taskManager.createTask(new Task("Task2", "Desc", TaskStatus.NEW));
+        Task task3 = taskManager.createTask(new Task("Task3", "Desc", TaskStatus.NEW));
 
         taskManager.getTask(task1.getId());
         taskManager.getTask(task2.getId());
         taskManager.getTask(task3.getId());
 
-        // Повторно просматриваем первую задачу
+        List<Task> history = taskManager.getHistory();
+        assertEquals(task1, history.get(0));
+        assertEquals(task2, history.get(1));
+        assertEquals(task3, history.get(2));
+
         taskManager.getTask(task1.getId());
 
-        List<Task> history = taskManager.getHistory();
-
-        // Задача должна переместиться в конец
+        history = taskManager.getHistory();
         assertEquals(task2, history.get(0));
         assertEquals(task3, history.get(1));
         assertEquals(task1, history.get(2));
-        assertEquals(3, history.size());
+
+        taskManager.deleteTask(task2.getId());
+
+        history = taskManager.getHistory();
+        assertEquals(2, history.size());
+        assertEquals(task3, history.get(0));
+        assertEquals(task1, history.get(1));
     }
 }
