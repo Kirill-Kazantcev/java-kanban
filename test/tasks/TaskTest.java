@@ -1,6 +1,6 @@
-package Tasks;
+package tasks;
 
-import Tools.TaskStatus;
+import tools.TaskStatus;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 

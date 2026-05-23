@@ -1,7 +1,7 @@
-package Manager;
+package manager;
 
-import Tasks.Task;
-import Tools.TaskStatus;
+import tasks.Task;
+import tools.TaskStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import java.util.List;

@@ -1,27 +1,19 @@
-import Tasks.Epic;
-import Tasks.Subtask;
-import Tasks.Task;
-import Manager.TaskManager;
-import Manager.Managers;
-import Tools.TaskStatus;
+import tasks.Epic;
+import tasks.Subtask;
+import tasks.Task;
+import manager.TaskManager;
+import manager.Managers;
+import tools.TaskStatus;
 import java.util.List;
 
 /**
  * Главный класс приложения для демонстрации работы трекера задач.
- * Содержит тестовые сценарии для проверки базового функционала и истории просмотров.
  *
  * @author Kirill-Kazantcev
  * @version 3.0
  * @since Sprint 4
  */
 public class Main {
-
-    /**
-     * Точка входа в приложение.
-     * Демонстрирует работу с задачами, эпиками, подзадачами и историей просмотров.
-     *
-     * @param args аргументы командной строки (не используются)
-     */
     public static void main(String[] args) {
         TaskManager manager = Managers.getDefault();
 
@@ -31,12 +23,6 @@ public class Main {
         historyFeature(manager);
     }
 
-    /**
-     * Демонстрирует базовый функционал менеджера задач.
-     * Включает создание, обновление и удаление задач, эпиков и подзадач.
-     *
-     * @param manager экземпляр менеджера задач
-     */
     private static void baseFunctionality(TaskManager manager) {
         System.out.println("\n=== Создание эпиков, задач и подзадач ===");
 
@@ -92,13 +78,6 @@ public class Main {
         System.out.println("Всего эпиков: " + manager.getEpics().size());
     }
 
-    /**
-     * Демонстрирует работу улучшенной истории просмотров.
-     * Показывает неограниченный размер истории, отсутствие дубликатов
-     * и удаление задач из истории при их удалении из менеджера.
-     *
-     * @param manager экземпляр менеджера задач
-     */
     private static void historyFeature(TaskManager manager) {
         System.out.println("\n=== Создание объектов для демонстрации истории ===");
 
@@ -138,11 +117,6 @@ public class Main {
         System.out.println("(Ожидается 14, так как task2 был удалён)");
     }
 
-    /**
-     * Выводит текущее состояние истории просмотров в консоль.
-     *
-     * @param manager экземпляр менеджера задач
-     */
     private static void printHistory(TaskManager manager) {
         List<Task> history = manager.getHistory();
         System.out.println("История (" + history.size() + "):");
