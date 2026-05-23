@@ -27,8 +27,8 @@ public class Main {
 
         System.out.println("===== ТРЕКЕР ЗАДАЧ =====");
 
-        BaseFunctionality(manager);
-        HistoryFeature(manager);
+        baseFunctionality(manager);
+        historyFeature(manager);
     }
 
     /**
@@ -37,7 +37,7 @@ public class Main {
      *
      * @param manager экземпляр менеджера задач
      */
-    private static void BaseFunctionality(TaskManager manager) {
+    private static void baseFunctionality(TaskManager manager) {
         System.out.println("\n=== Создание эпиков, задач и подзадач ===");
 
         Task task1 = manager.createTask(new Task("Сделать Manager и Tools",
@@ -99,7 +99,7 @@ public class Main {
      *
      * @param manager экземпляр менеджера задач
      */
-    private static void HistoryFeature(TaskManager manager) {
+    private static void historyFeature(TaskManager manager) {
         System.out.println("\n=== Создание объектов для демонстрации истории ===");
 
         Task task1 = manager.createTask(new Task("Задача 1", "Описание 1", TaskStatus.NEW));
