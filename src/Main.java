@@ -3,7 +3,10 @@ import tasks.Subtask;
 import tasks.Task;
 import manager.TaskManager;
 import manager.Managers;
+import manager.FileBackedTaskManager;
 import tools.TaskStatus;
+import java.io.File;
+import java.io.IOException;
 import java.util.List;
 
 /**
@@ -21,6 +24,13 @@ public class Main {
 
         baseFunctionality(manager);
         historyFeature(manager);
+
+        System.out.println("\n===== Демонстрация fileBackedTaskManager =====");
+        try {
+            fileBackedTaskManagerDemo();
+        } catch (IOException e) {
+            System.out.println("Ошибка при демонстрации: " + e.getMessage());
+        }
     }
 
     private static void baseFunctionality(TaskManager manager) {
@@ -124,5 +134,26 @@ public class Main {
             System.out.println("  - " + task.getTitle() + " (ID: " + task.getId() + ")");
         }
         System.out.println();
+    }
+
+    private static void fileBackedTaskManagerDemo() throws IOException {
+        File file = File.createTempFile("kanban", ".csv");
+        file.deleteOnExit();
+
+        FileBackedTaskManager manager1 = new FileBackedTaskManager(file);
+
+        Task task1 = new Task("Задача для файла", "Описание", TaskStatus.NEW);
+        Epic epic1 = new Epic("Эпик для файла", "Описание эпика");
+        manager1.createTask(task1);
+        manager1.createEpic(epic1);
+
+        System.out.println("Создано задач: " + manager1.getTasks().size());
+        System.out.println("Создано эпиков: " + manager1.getEpics().size());
+
+        FileBackedTaskManager manager2 = FileBackedTaskManager.loadFromFile(file);
+
+        System.out.println("Загружено задач: " + manager2.getTasks().size());
+        System.out.println("Загружено эпиков: " + manager2.getEpics().size());
+        System.out.println("Данные успешно сохранены и восстановлены!");
     }
 }
