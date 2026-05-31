@@ -67,23 +67,16 @@ public class FileBackedTaskManager extends InMemoryTaskManager {
      * @return строка в формате CSV, представляющая задачу
      */
     private String toString(Task task) {
-        String type;
-        if (task instanceof Epic) {
-            type = TaskType.EPIC.name();
-        } else if (task instanceof Subtask) {
-            type = TaskType.SUBTASK.name();
-        } else {
-            type = TaskType.TASK.name();
-        }
+        TaskType type = task.getType();
 
         String epicId = "";
-        if (task instanceof Subtask) {
+        if (type == TaskType.SUBTASK) {
             epicId = String.valueOf(((Subtask) task).getEpicId());
         }
 
         return String.join(",",
                 String.valueOf(task.getId()),
-                type,
+                type.name(),
                 task.getTitle(),
                 task.getStatus().name(),
                 task.getDescription(),
@@ -186,9 +179,9 @@ public class FileBackedTaskManager extends InMemoryTaskManager {
                 }
                 Task task = fromString(lines[i]);
                 if (task != null) {
-                    if (task instanceof Epic) {
+                    if (task.getType() == TaskType.EPIC) {
                         manager.epics.put(task.getId(), (Epic) task);
-                    } else if (task instanceof Subtask) {
+                    } else if (task.getType() == TaskType.SUBTASK) {
                         Subtask subtask = (Subtask) task;
                         manager.subtasks.put(subtask.getId(), subtask);
                         // Восстанавливаем связь с эпиком

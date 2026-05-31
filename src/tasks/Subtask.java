@@ -1,6 +1,7 @@
 package tasks;
 
 import tools.TaskStatus;
+import tools.TaskType;
 
 /**
  * Класс подзадачи - задачи, относящейся к определённому эпику.
@@ -44,6 +45,17 @@ public class Subtask extends Task {
      */
     public void setEpicId(int epicId) {
         this.epicId = epicId;
+    }
+
+    /**
+     * Возвращает тип задачи.
+     * Для подзадачи возвращает SUBTASK.
+     *
+     * @return тип задачи (SUBTASK)
+     */
+    @Override
+    public TaskType getType() {
+        return TaskType.SUBTASK;
     }
 
     /**
