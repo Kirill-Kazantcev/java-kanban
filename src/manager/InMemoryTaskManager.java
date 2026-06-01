@@ -4,6 +4,7 @@ import tasks.Task;
 import tasks.Epic;
 import tasks.Subtask;
 import tools.TaskStatus;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -27,16 +28,16 @@ import java.util.Map;
 public class InMemoryTaskManager implements TaskManager {
 
     /** Счетчик для генерации уникальных ID */
-    private int counter = 1;
+    private static int counter = 1;
 
     /** Хранилище обычных задач */
-    private final Map<Integer, Task> tasks = new HashMap<>();
+    protected final Map<Integer, Task> tasks = new HashMap<>();
 
     /** Хранилище эпиков */
-    private final Map<Integer, Epic> epics = new HashMap<>();
+    protected final Map<Integer, Epic> epics = new HashMap<>();
 
     /** Хранилище подзадач */
-    private final Map<Integer, Subtask> subtasks = new HashMap<>();
+    protected final Map<Integer, Subtask> subtasks = new HashMap<>();
 
     /** Менеджер истории просмотров */
     private final HistoryManager historyManager;
@@ -46,6 +47,25 @@ public class InMemoryTaskManager implements TaskManager {
      */
     public InMemoryTaskManager() {
         this.historyManager = Managers.getDefaultHistory();
+    }
+
+    /**
+     * Устанавливает значение счетчика ID.
+     * Используется при загрузке менеджера из файла для восстановления корректного значения счетчика.
+     *
+     * @param id новое значение счетчика
+     */
+    public static void setNextId(int id) {
+        counter = id;
+    }
+
+    /**
+     * Генерирует новый уникальный идентификатор.
+     *
+     * @return новый ID
+     */
+    protected static int generateId() {
+        return counter++;
     }
 
     // ========== Реализация методов для Task ==========
@@ -77,7 +97,7 @@ public class InMemoryTaskManager implements TaskManager {
         if (task == null) {
             throw new IllegalArgumentException("Задача не может быть null");
         }
-        task.setId(counter++);
+        task.setId(generateId());
         tasks.put(task.getId(), task);
         return task;
     }
@@ -137,7 +157,7 @@ public class InMemoryTaskManager implements TaskManager {
         if (epic == null) {
             throw new IllegalArgumentException("Эпик не может быть null");
         }
-        epic.setId(counter++);
+        epic.setId(generateId());
         epics.put(epic.getId(), epic);
         return epic;
     }
@@ -207,7 +227,7 @@ public class InMemoryTaskManager implements TaskManager {
             throw new IllegalArgumentException("Эпик с ID " + epicId + " не существует");
         }
 
-        subtask.setId(counter++);
+        subtask.setId(generateId());
         subtasks.put(subtask.getId(), subtask);
         epic.addSubtaskId(subtask.getId());
         updateEpicStatus(epicId);
@@ -292,7 +312,7 @@ public class InMemoryTaskManager implements TaskManager {
         return historyManager.getHistory();
     }
 
-    // ========== Приватные методы ==========
+    // ========== Защищенные методы ==========
 
     /**
      * Обновляет статус эпика на основе статусов его подзадач.
@@ -306,7 +326,7 @@ public class InMemoryTaskManager implements TaskManager {
      *
      * @param epicId идентификатор эпика
      */
-    private void updateEpicStatus(int epicId) {
+    protected void updateEpicStatus(int epicId) {
         Epic epic = epics.get(epicId);
         if (epic == null) {
             return;

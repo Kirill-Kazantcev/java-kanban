@@ -1,6 +1,7 @@
 package tasks;
 
 import tools.TaskStatus;
+import tools.TaskType;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -64,6 +65,17 @@ public class Epic extends Task {
      */
     public void clearSubtaskIds() {
         subtaskIds.clear();
+    }
+
+    /**
+     * Возвращает тип задачи.
+     * Для эпика возвращает EPIC.
+     *
+     * @return тип задачи (EPIC)
+     */
+    @Override
+    public TaskType getType() {
+        return TaskType.EPIC;
     }
 
     /**

@@ -1,6 +1,7 @@
 package tasks;
 
 import tools.TaskStatus;
+import tools.TaskType;
 import java.util.Objects;
 
 /**
@@ -71,6 +72,18 @@ public class Task {
 
     public void setStatus(TaskStatus status) {
         this.status = status;
+    }
+
+    // ========== Метод для определения типа ==========
+
+    /**
+     * Возвращает тип задачи.
+     * Для обычной задачи возвращает TASK.
+     *
+     * @return тип задачи (TASK, EPIC или SUBTASK)
+     */
+    public TaskType getType() {
+        return TaskType.TASK;
     }
 
     // ========== Переопределенные методы Object ==========
