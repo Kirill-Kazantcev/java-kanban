@@ -2,6 +2,8 @@ package tasks;
 
 import tools.TaskStatus;
 import tools.TaskType;
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -19,6 +21,9 @@ public class Epic extends Task {
     /** Список идентификаторов подзадач, входящих в эпик */
     private final List<Integer> subtaskIds;
 
+    /** Время завершения эпика (расчётное) */
+    private LocalDateTime endTime;
+
     /**
      * Конструктор для создания нового эпика.
      * Статус автоматически устанавливается в NEW.
@@ -29,6 +34,9 @@ public class Epic extends Task {
     public Epic(String title, String description) {
         super(title, description, TaskStatus.NEW);
         this.subtaskIds = new ArrayList<>();
+        this.setDuration(Duration.ZERO);
+        this.setStartTime(null);
+        this.endTime = null;
     }
 
     /**
@@ -68,6 +76,46 @@ public class Epic extends Task {
     }
 
     /**
+     * Пересчитывает временные параметры эпика на основе подзадач.
+     *
+     * @param subtasks список подзадач эпика
+     */
+    public void recalculateTimes(List<Subtask> subtasks) {
+        if (subtasks == null || subtasks.isEmpty()) {
+            setDuration(Duration.ZERO);
+            setStartTime(null);
+            this.endTime = null;
+            return;
+        }
+        Duration totalDuration = Duration.ZERO;
+        LocalDateTime earliestStart = null;
+        LocalDateTime latestEnd = null;
+        for (Subtask subtask : subtasks) {
+            if (subtask.getDuration() != null) {
+                totalDuration = totalDuration.plus(subtask.getDuration());
+            }
+            LocalDateTime subStart = subtask.getStartTime();
+            if (subStart != null) {
+                if (earliestStart == null || subStart.isBefore(earliestStart)) {
+                    earliestStart = subStart;
+                }
+                LocalDateTime subEnd = subtask.getEndTime();
+                if (subEnd != null && (latestEnd == null || subEnd.isAfter(latestEnd))) {
+                    latestEnd = subEnd;
+                }
+            }
+        }
+        setDuration(totalDuration);
+        setStartTime(earliestStart);
+        this.endTime = latestEnd;
+    }
+
+    @Override
+    public LocalDateTime getEndTime() {
+        return endTime;
+    }
+
+    /**
      * Возвращает тип задачи.
      * Для эпика возвращает EPIC.
      *
@@ -92,6 +140,9 @@ public class Epic extends Task {
                 ", description='" + getDescription() + '\'' +
                 ", status=" + getStatus() +
                 ", subtaskIds=" + subtaskIds +
+                ", duration=" + (getDuration() != null ? getDuration().toMinutes() : 0) +
+                ", startTime=" + getStartTime() +
+                ", endTime=" + endTime +
                 '}';
     }
 }

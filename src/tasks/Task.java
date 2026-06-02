@@ -2,6 +2,8 @@ package tasks;
 
 import tools.TaskStatus;
 import tools.TaskType;
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.Objects;
 
 /**
@@ -27,6 +29,12 @@ public class Task {
     /** Текущий статус задачи */
     private TaskStatus status;
 
+    /** Продолжительность задачи (в минутах) */
+    private Duration duration;
+
+    /** Дата и время начала выполнения задачи */
+    private LocalDateTime startTime;
+
     /**
      * Конструктор для создания новой задачи.
      *
@@ -35,9 +43,19 @@ public class Task {
      * @param status начальный статус задачи
      */
     public Task(String title, String description, TaskStatus status) {
+        this(title, description, status, Duration.ZERO, null);
+    }
+
+    /**
+     * Конструктор для создания задачи с продолжительностью и временем старта.
+     */
+    public Task(String title, String description, TaskStatus status,
+                Duration duration, LocalDateTime startTime) {
         this.title = title;
         this.description = description;
         this.status = status;
+        this.duration = duration != null ? duration : Duration.ZERO;
+        this.startTime = startTime;
     }
 
     // ========== Геттеры и сеттеры ==========
@@ -72,6 +90,32 @@ public class Task {
 
     public void setStatus(TaskStatus status) {
         this.status = status;
+    }
+
+    public Duration getDuration() {
+        return duration;
+    }
+
+    public void setDuration(Duration duration) {
+        this.duration = duration;
+    }
+
+    public LocalDateTime getStartTime() {
+        return startTime;
+    }
+
+    public void setStartTime(LocalDateTime startTime) {
+        this.startTime = startTime;
+    }
+
+    /**
+     * Возвращает время завершения задачи.
+     *
+     * @return время окончания (startTime + duration) или null
+     */
+    public LocalDateTime getEndTime() {
+        if (startTime == null || duration == null) return null;
+        return startTime.plus(duration);
     }
 
     // ========== Метод для определения типа ==========
@@ -124,6 +168,8 @@ public class Task {
                 ", title='" + title + '\'' +
                 ", description='" + description + '\'' +
                 ", status=" + status +
+                ", duration=" + (duration != null ? duration.toMinutes() : 0) +
+                ", startTime=" + startTime +
                 '}';
     }
 }

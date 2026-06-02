@@ -210,7 +210,7 @@ class TaskManagerTest {
 
     @Test
     void historyShouldNotHaveSizeLimit() {  // ИЗМЕНЕНО: было historyShouldHaveSizeLimit
-        // Создаем 15 задач и добавляем в историю
+        //  Создаем: 15 задач и добавляем в историю
         for (int i = 0; i < 15; i++) {
             Task task = taskManager.createTask(new Task("Task " + i, "Desc " + i, TaskStatus.NEW));
             taskManager.getTask(task.getId());

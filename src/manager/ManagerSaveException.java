@@ -22,6 +22,15 @@ package manager;
 public class ManagerSaveException extends RuntimeException {
 
     /**
+     * Конструктор исключения с сообщением.
+     *
+     * @param message сообщение об ошибке
+     */
+    public ManagerSaveException(String message) {
+        super(message);
+    }
+
+    /**
      * Конструктор исключения с сообщением и причиной.
      *
      * @param message сообщение об ошибке

@@ -11,7 +11,7 @@ import java.util.List;
  * обычными задачами, эпиками и подзадачами.
  *
  * @author Kirill-Kazantcev
- * @version 3.0
+ * @version 4.0
  * @since Sprint 5
  */
 public interface TaskManager {
@@ -184,4 +184,13 @@ public interface TaskManager {
      * @return список просмотренных задач в порядке просмотра
      */
     List<Task> getHistory();
+
+    /**
+     * Возвращает список всех задач и подзадач, отсортированный по времени начала.
+     * Задачи без заданного времени начала помещаются в конец списка.
+     * Сложность получения - O(1) (возвращает копию предварительно отсортированной коллекции).
+     *
+     * @return отсортированный список задач (Task и Subtask)
+     */
+    List<Task> getPrioritizedTasks();
 }

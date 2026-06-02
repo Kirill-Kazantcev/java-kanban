@@ -4,16 +4,19 @@ import tasks.Task;
 import manager.TaskManager;
 import manager.Managers;
 import manager.FileBackedTaskManager;
+import manager.ManagerSaveException;
 import tools.TaskStatus;
 import java.io.File;
 import java.io.IOException;
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
  * Главный класс приложения для демонстрации работы трекера задач.
  *
  * @author Kirill-Kazantcev
- * @version 3.0
+ * @version 4.0
  * @since Sprint 4
  */
 public class Main {
@@ -24,6 +27,7 @@ public class Main {
 
         baseFunctionality(manager);
         historyFeature(manager);
+        prioritizedAndOverlapDemo(manager);
 
         System.out.println("\n===== Демонстрация fileBackedTaskManager =====");
         try {
@@ -127,6 +131,59 @@ public class Main {
         System.out.println("(Ожидается 14, так как task2 был удалён)");
     }
 
+    private static void prioritizedAndOverlapDemo(TaskManager manager) {
+        System.out.println("\n=== Демонстрация приоритетов и проверки пересечений ===");
+
+        manager.deleteAllTasks();
+        manager.deleteAllEpics();
+        manager.deleteAllSubtasks();
+
+        Task taskA = new Task("Встреча A", "Описание A", TaskStatus.NEW,
+                Duration.ofMinutes(60), LocalDateTime.of(2025, 1, 1, 10, 0));
+        manager.createTask(taskA);
+
+        Task taskB = new Task("Встреча B", "Описание B", TaskStatus.NEW,
+                Duration.ofMinutes(60), LocalDateTime.of(2025, 1, 1, 12, 0));
+        manager.createTask(taskB);
+
+        try {
+            Task taskC = new Task("Встреча C (пересекается)", "Описание C", TaskStatus.NEW,
+                    Duration.ofMinutes(60), LocalDateTime.of(2025, 1, 1, 10, 30));
+            manager.createTask(taskC);
+            System.out.println("ОШИБКА: Пересекающаяся задача была добавлена, хотя не должна была.");
+        } catch (ManagerSaveException e) {
+            System.out.println("Корректно перехвачено исключение: " + e.getMessage());
+        }
+
+        manager.deleteTask(taskA.getId());
+        manager.deleteTask(taskB.getId());
+
+        Epic epicTime = new Epic("Эпик с временем", "Проверка расчёта времени эпика");
+        manager.createEpic(epicTime);
+
+        Subtask sub1 = new Subtask("Подзадача 1", "", TaskStatus.NEW, epicTime.getId(),
+                Duration.ofMinutes(30), LocalDateTime.of(2025, 1, 1, 9, 0));
+        Subtask sub2 = new Subtask("Подзадача 2", "", TaskStatus.NEW, epicTime.getId(),
+                Duration.ofMinutes(45), LocalDateTime.of(2025, 1, 1, 10, 0));
+        manager.createSubtask(sub1);
+        manager.createSubtask(sub2);
+
+        System.out.println("\nЗадачи в порядке приоритета (по startTime):");
+        List<Task> prioritized = manager.getPrioritizedTasks();
+        for (Task t : prioritized) {
+            System.out.printf("  - %s (id=%d): start=%s, end=%s\n",
+                    t.getTitle(), t.getId(),
+                    t.getStartTime() != null ? t.getStartTime() : "не задано",
+                    t.getEndTime() != null ? t.getEndTime() : "не задано");
+        }
+
+        Epic updatedEpic = manager.getEpic(epicTime.getId());
+        System.out.println("\nВремя эпика '" + updatedEpic.getTitle() + "':");
+        System.out.println("  - Продолжительность: " + updatedEpic.getDuration().toMinutes() + " мин");
+        System.out.println("  - Старт: " + updatedEpic.getStartTime());
+        System.out.println("  - Завершение: " + updatedEpic.getEndTime());
+    }
+
     private static void printHistory(TaskManager manager) {
         List<Task> history = manager.getHistory();
         System.out.println("История (" + history.size() + "):");
@@ -142,7 +199,8 @@ public class Main {
 
         FileBackedTaskManager manager1 = new FileBackedTaskManager(file);
 
-        Task task1 = new Task("Задача для файла", "Описание", TaskStatus.NEW);
+        Task task1 = new Task("Задача для файла", "Описание", TaskStatus.NEW,
+                Duration.ofMinutes(90), LocalDateTime.now());
         Epic epic1 = new Epic("Эпик для файла", "Описание эпика");
         manager1.createTask(task1);
         manager1.createEpic(epic1);
