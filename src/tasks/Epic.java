@@ -76,43 +76,21 @@ public class Epic extends Task {
     }
 
     /**
-     * Пересчитывает временные параметры эпика на основе подзадач.
+     * Возвращает время окончания эпика.
      *
-     * @param subtasks список подзадач эпика
+     * @return время окончания или null, если подзадач нет
      */
-    public void recalculateTimes(List<Subtask> subtasks) {
-        if (subtasks == null || subtasks.isEmpty()) {
-            setDuration(Duration.ZERO);
-            setStartTime(null);
-            this.endTime = null;
-            return;
-        }
-        Duration totalDuration = Duration.ZERO;
-        LocalDateTime earliestStart = null;
-        LocalDateTime latestEnd = null;
-        for (Subtask subtask : subtasks) {
-            if (subtask.getDuration() != null) {
-                totalDuration = totalDuration.plus(subtask.getDuration());
-            }
-            LocalDateTime subStart = subtask.getStartTime();
-            if (subStart != null) {
-                if (earliestStart == null || subStart.isBefore(earliestStart)) {
-                    earliestStart = subStart;
-                }
-                LocalDateTime subEnd = subtask.getEndTime();
-                if (subEnd != null && (latestEnd == null || subEnd.isAfter(latestEnd))) {
-                    latestEnd = subEnd;
-                }
-            }
-        }
-        setDuration(totalDuration);
-        setStartTime(earliestStart);
-        this.endTime = latestEnd;
-    }
-
-    @Override
     public LocalDateTime getEndTime() {
         return endTime;
+    }
+
+    /**
+     * Устанавливает время окончания эпика.
+     *
+     * @param endTime новое время окончания
+     */
+    public void setEndTime(LocalDateTime endTime) {
+        this.endTime = endTime;
     }
 
     /**

@@ -30,10 +30,10 @@ public class Task {
     private TaskStatus status;
 
     /** Продолжительность задачи (в минутах) */
-    private Duration duration;
+    protected Duration duration;
 
     /** Дата и время начала выполнения задачи */
-    private LocalDateTime startTime;
+    protected LocalDateTime startTime;
 
     /**
      * Конструктор для создания новой задачи.
@@ -116,6 +116,17 @@ public class Task {
     public LocalDateTime getEndTime() {
         if (startTime == null || duration == null) return null;
         return startTime.plus(duration);
+    }
+
+    /**
+     * Устанавливает время окончания задачи.
+     *
+     * @param endTime время окончания
+     */
+    public void setEndTime(LocalDateTime endTime) {
+        if (startTime != null && endTime != null) {
+            this.duration = Duration.between(startTime, endTime);
+        }
     }
 
     // ========== Метод для определения типа ==========

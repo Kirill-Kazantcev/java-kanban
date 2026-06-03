@@ -199,8 +199,7 @@ public class FileBackedTaskManager extends InMemoryTaskManager {
                         Epic epic = manager.epics.get(subtask.getEpicId());
                         if (epic != null) {
                             epic.addSubtaskId(subtask.getId());
-                            // Обновляем статус и время эпика через метод родителя
-                            manager.updateEpicStatus(epic.getId());
+                            manager.updateEpicParameters(epic.getId());
                         }
                     } else {
                         manager.tasks.put(task.getId(), task);
@@ -241,7 +240,6 @@ public class FileBackedTaskManager extends InMemoryTaskManager {
         TaskStatus status = TaskStatus.valueOf(fields[3]);
         String description = unescapeCommas(fields[4]);
         String epicIdStr = fields[5];
-        // fields.length уже >=7, поэтому durationStr всегда есть
         String durationStr = fields[6];
         String startTimeStr = fields.length > 7 ? fields[7] : "";
 
@@ -257,6 +255,8 @@ public class FileBackedTaskManager extends InMemoryTaskManager {
                 Epic epic = new Epic(name, description);
                 epic.setId(id);
                 epic.setStatus(status);
+                epic.setDuration(duration);
+                epic.setStartTime(startTime);
                 return epic;
             case SUBTASK:
                 int epicId = Integer.parseInt(epicIdStr);
