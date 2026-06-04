@@ -33,9 +33,23 @@ src/
 │   ├── Task.java                           # Базовый класс задачи
 │   ├── Epic.java                           # Класс эпика (наследник Task)
 │   └── Subtask.java                        # Класс подзадачи (наследник Task)
-└── tools/                                  # Пакет для вспомогательных классов
-    ├── TaskType.java                       # Перечисление типов задач для CSV
-    └── TaskStatus.java                     # Перечисление статусов задач
+├── tools/                                  # Пакет для вспомогательных классов
+│   ├── TaskType.java                       # Перечисление типов задач для CSV
+│   ├── TaskStatus.java                     # Перечисление статусов задач
+│   ├── LocalDateTimeAdapter.java           # Адаптер для LocalDateTime (Gson)
+│   └── DurationAdapter.java                # Адаптер для Duration (Gson)
+└── server/                                 # Пакет для HTTP сервера
+    ├── HttpTaskServer.java                 # Основной класс сервера (main)
+    ├── handlers/                           # Обработчики эндпоинтов
+    │   ├── BaseHttpHandler.java            # Базовый класс с общими методами
+    │   ├── TasksHandler.java               # Обработчик /tasks
+    │   ├── SubtasksHandler.java            # Обработчик /subtasks
+    │   ├── EpicsHandler.java               # Обработчик /epics
+    │   ├── HistoryHandler.java             # Обработчик /history
+    │   └── PrioritizedHandler.java         # Обработчик /prioritized
+    └── exceptions/                         # Исключения для HTTP
+        ├── NotFoundException.java          # 404 - ресурс не найден
+        └── HasInteractionsException.java   # 406 - пересечение задач
 
 test/                                       # Тесты
 ├── manager/                                # Тесты менеджеров
@@ -44,10 +58,17 @@ test/                                       # Тесты
 │   ├── FileBackedTaskManagerTest.java      # Тесты FileBackedTaskManager
 │   ├── InMemoryHistoryManagerTest.java     # Тесты истории просмотров
 │   └── ManagersTest.java                   # Тесты утилитарного класса
-└── tasks/                                  # Тесты задач
-    ├── TaskTest.java                       # Тесты Task
-    ├── EpicTest.java                       # Тесты Epic
-    └── SubtaskTest.java                    # Тесты Subtask
+├── tasks/                                  # Тесты задач
+│   ├── TaskTest.java                       # Тесты Task
+│   ├── EpicTest.java                       # Тесты Epic
+│   └── SubtaskTest.java                    # Тесты Subtask
+└── server/                                 # Тесты HTTP сервера
+    ├── HttpTaskServerTest.java             # Базовый класс с настройкой сервера
+    ├── TasksHandlerTest.java               # Тесты для /tasks
+    ├── SubtasksHandlerTest.java            # Тесты для /subtasks
+    ├── EpicsHandlerTest.java               # Тесты для /epics
+    ├── HistoryHandlerTest.java             # Тесты для /history
+    └── PrioritizedHandlerTest.java         # Тесты для /prioritized
 
 ```
 ## Классы задач
@@ -203,6 +224,45 @@ test/                                       # Тесты
 - Расчёт времени эпика (продолжительность, startTime, endTime) на основе подзадач в менеджере через 
 метод `updateEpicTime()`
 
+## HTTP API
+
+### HttpTaskServer - HTTP сервер для доступа к TaskManager
+
+Предоставляет REST API для взаимодействия с менеджером задач через HTTP запросы. Сервер запускается на порту 8080.
+
+#### Эндпоинты
+
+| HTTP метод | URL | Описание | Статусы ответа |
+|---|---|---|---|
+| GET | /tasks | Получить все задачи | 200 |
+| GET | /tasks/{id} | Получить задачу по ID | 200, 404 |
+| POST | /tasks | Создать или обновить задачу | 201, 406 |
+| DELETE | /tasks/{id} | Удалить задачу по ID | 200 |
+| DELETE | /tasks | Удалить все задачи | 200 |
+| GET | /subtasks | Получить все подзадачи | 200 |
+| GET | /subtasks/{id} | Получить подзадачу по ID | 200, 404 |
+| POST | /subtasks | Создать или обновить подзадачу | 201, 404, 406 |
+| DELETE | /subtasks/{id} | Удалить подзадачу по ID | 200 |
+| DELETE | /subtasks | Удалить все подзадачи | 200 |
+| GET | /epics | Получить все эпики | 200 |
+| GET | /epics/{id} | Получить эпик по ID | 200, 404 |
+| GET | /epics/{id}/subtasks | Получить подзадачи эпика | 200, 404 |
+| POST | /epics | Создать или обновить эпик | 201 |
+| DELETE | /epics/{id} | Удалить эпик по ID | 200 |
+| DELETE | /epics | Удалить все эпики | 200 |
+| GET | /history | Получить историю просмотров | 200 |
+| GET | /prioritized | Получить задачи в порядке приоритета (по startTime) | 200 |
+
+#### Коды ответа
+
+| Код | Описание |
+|---|---|
+| 200 OK | Успешный ответ с данными |
+| 201 Created | Ресурс успешно создан |
+| 404 Not Found | Ресурс не найден |
+| 406 Not Acceptable | Задача пересекается по времени с существующими |
+| 500 Internal Server Error | Внутренняя ошибка сервера |
+
 ## Тестирование
 Проект покрыт юнит-тестами с использованием JUnit:
 
@@ -243,6 +303,14 @@ test/                                       # Тесты
 - Проверка корректного расчёта продолжительности, startTime и endTime эпика на основе подзадач
 - Проверка, что у эпика без подзадач duration = 0, startTime/endTime = null
 
+**Тесты HTTP API:**
+- Проверка создания, получения, обновления и удаления задач через HTTP
+- Проверка создания, получения и удаления эпиков через HTTP
+- Проверка создания, получения и удаления подзадач через HTTP
+- Проверка получения истории просмотров через HTTP
+- Проверка получения приоритетных задач через HTTP
+- Проверка статусов ответов (200, 201, 404, 406, 500)
+
 Абстрактный базовый класс `AbstractTaskManagerTest` позволяет переиспользовать все общие тесты для 
 `InMemoryTaskManager` и `FileBackedTaskManager`.
 
@@ -255,3 +323,5 @@ test/                                       # Тесты
 - Sprint 8 Version 3.2.0 - добавлены продолжительность и время старта задач, приоритетная сортировка (TreeSet), 
 проверка пересечений интервалов, расчёт времени эпика на основе подзадач (реализован в менеджере через `updateEpicTime`), 
 обновлена сериализация/десериализация в CSV, расширены тесты.
+- Sprint 9 Version 4.0.0 - добавлен HTTP API (HttpTaskServer) с REST эндпоинтами для доступа к TaskManager,
+  добавлены тесты для всех эндпоинтов.
