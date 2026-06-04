@@ -4,9 +4,12 @@ import tasks.Epic;
 import tasks.Subtask;
 import tasks.Task;
 import tools.TaskStatus;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -17,7 +20,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * а также работу истории просмотров.
  *
  * @author Kirill-Kazantcev
- * @version 3.0
+ * @version 4.0
  * @since Sprint 5
  */
 class InMemoryTaskManagerTest {
@@ -224,7 +227,7 @@ class InMemoryTaskManagerTest {
         List<Task> history = taskManager.getHistory();
 
         assertEquals(1, history.size());
-        assertEquals(task, history.get(0));
+        assertEquals(task, history.getFirst());
     }
 
     /**
@@ -240,7 +243,7 @@ class InMemoryTaskManagerTest {
 
         List<Task> history = taskManager.getHistory();
         assertEquals(1, history.size(), "В истории не должно быть дубликатов");
-        assertEquals(task, history.get(0));
+        assertEquals(task, history.getFirst());
     }
 
     /**
@@ -260,7 +263,7 @@ class InMemoryTaskManagerTest {
         List<Task> history = taskManager.getHistory();
 
         assertEquals(3, history.size());
-        assertEquals(task2, history.get(0));
+        assertEquals(task2, history.getFirst());
         assertEquals(task3, history.get(1));
         assertEquals(task1, history.get(2));
     }
@@ -331,14 +334,14 @@ class InMemoryTaskManagerTest {
         taskManager.getTask(task3.getId());
 
         List<Task> history = taskManager.getHistory();
-        assertEquals(task1, history.get(0));
+        assertEquals(task1, history.getFirst());
         assertEquals(task2, history.get(1));
         assertEquals(task3, history.get(2));
 
         taskManager.getTask(task1.getId());
 
         history = taskManager.getHistory();
-        assertEquals(task2, history.get(0));
+        assertEquals(task2, history.getFirst());
         assertEquals(task3, history.get(1));
         assertEquals(task1, history.get(2));
 
@@ -346,7 +349,173 @@ class InMemoryTaskManagerTest {
 
         history = taskManager.getHistory();
         assertEquals(2, history.size());
-        assertEquals(task3, history.get(0));
+        assertEquals(task3, history.getFirst());
         assertEquals(task1, history.get(1));
+    }
+
+    // ========== Тесты истории приоритетов пересечений и времени эпика ==========
+    /**
+     * Проверяет, что метод getPrioritizedTasks возвращает задачи, отсортированные по startTime.
+     */
+    @Test
+    void shouldReturnPrioritizedTasksSortedByStartTime() {
+        Task task1 = new Task("A", "", TaskStatus.NEW,
+                Duration.ofMinutes(30), LocalDateTime.of(2025, 1, 1, 12, 0));
+        Task task2 = new Task("B", "", TaskStatus.NEW,
+                Duration.ofMinutes(30), LocalDateTime.of(2025, 1, 1, 10, 0));
+        taskManager.createTask(task2);
+        taskManager.createTask(task1);
+        List<Task> prioritized = taskManager.getPrioritizedTasks();
+        assertEquals(2, prioritized.size());
+        assertTrue(prioritized.getFirst().getStartTime().isBefore(prioritized.get(1).getStartTime()));
+    }
+
+    /**
+     * Проверяет, что задачи с null startTime не попадают в список приоритетных.
+     */
+    @Test
+    void shouldNotIncludeTasksWithNullStartTimeInPrioritizedList() {
+        Task taskNoTime = new Task("NoTime", "", TaskStatus.NEW);
+        taskManager.createTask(taskNoTime);
+        assertTrue(taskManager.getPrioritizedTasks().isEmpty());
+    }
+
+    /**
+     * Проверяет, что подзадачи также учитываются в приоритетном списке.
+     */
+    @Test
+    void prioritizedListShouldIncludeSubtasks() {
+        Epic epic = taskManager.createEpic(new Epic("Epic", ""));
+        Subtask sub = new Subtask("Sub", "", TaskStatus.NEW, epic.getId(),
+                Duration.ofMinutes(20), LocalDateTime.of(2025, 1, 1, 9, 0));
+        taskManager.createSubtask(sub);
+        List<Task> prioritized = taskManager.getPrioritizedTasks();
+        assertEquals(1, prioritized.size());
+        assertEquals(sub, prioritized.getFirst());
+    }
+
+    /**
+     * Проверяет, что при попытке создать пересекающуюся задачу выбрасывается исключение ManagerSaveException.
+     */
+    @Test
+    void shouldNotAllowOverlappingTasks() {
+        Task task1 = new Task("First", "", TaskStatus.NEW,
+                Duration.ofMinutes(60), LocalDateTime.of(2025, 1, 1, 10, 0));
+        taskManager.createTask(task1);
+        Task task2 = new Task("Second", "", TaskStatus.NEW,
+                Duration.ofMinutes(60), LocalDateTime.of(2025, 1, 1, 10, 30));
+        assertThrows(ManagerSaveException.class, () -> taskManager.createTask(task2));
+    }
+
+    /**
+     * Проверяет, что непересекающиеся задачи добавляются без ошибок.
+     */
+    @Test
+    void shouldAllowNonOverlappingTasks() {
+        Task task1 = new Task("First", "", TaskStatus.NEW,
+                Duration.ofMinutes(60), LocalDateTime.of(2025, 1, 1, 10, 0));
+        taskManager.createTask(task1);
+        Task task2 = new Task("Second", "", TaskStatus.NEW,
+                Duration.ofMinutes(60), LocalDateTime.of(2025, 1, 1, 11, 30));
+        assertDoesNotThrow(() -> taskManager.createTask(task2));
+    }
+
+    /**
+     * Проверяет, что подзадача не может пересекаться с уже существующей задачей.
+     */
+    @Test
+    void shouldNotAllowOverlappingSubtaskWithExistingTask() {
+        Task existing = new Task("Existing", "", TaskStatus.NEW,
+                Duration.ofMinutes(60), LocalDateTime.of(2025, 1, 1, 10, 0));
+        taskManager.createTask(existing);
+        Epic epic = taskManager.createEpic(new Epic("Epic", ""));
+        Subtask subtask = new Subtask("Sub", "", TaskStatus.NEW, epic.getId(),
+                Duration.ofMinutes(30), LocalDateTime.of(2025, 1, 1, 10, 15));
+        assertThrows(ManagerSaveException.class, () -> taskManager.createSubtask(subtask));
+    }
+
+    /**
+     * Проверяет граничный случай: все подзадачи эпика имеют статус NEW.
+     */
+    @Test
+    void epicStatusAllNew() {
+        Epic epic = taskManager.createEpic(new Epic("Epic", ""));
+        Subtask sub1 = new Subtask("S1", "", TaskStatus.NEW, epic.getId());
+        Subtask sub2 = new Subtask("S2", "", TaskStatus.NEW, epic.getId());
+        taskManager.createSubtask(sub1);
+        taskManager.createSubtask(sub2);
+        assertEquals(TaskStatus.NEW, taskManager.getEpic(epic.getId()).getStatus());
+    }
+
+    /**
+     * Проверяет граничный случай: все подзадачи эпика имеют статус DONE.
+     */
+    @Test
+    void epicStatusAllDone() {
+        Epic epic = taskManager.createEpic(new Epic("Epic", ""));
+        Subtask sub1 = new Subtask("S1", "", TaskStatus.DONE, epic.getId());
+        Subtask sub2 = new Subtask("S2", "", TaskStatus.DONE, epic.getId());
+        taskManager.createSubtask(sub1);
+        taskManager.createSubtask(sub2);
+        assertEquals(TaskStatus.DONE, taskManager.getEpic(epic.getId()).getStatus());
+    }
+
+    /**
+     * Проверяет граничный случай: подзадачи со статусами NEW и DONE (эпик должен быть IN_PROGRESS).
+     */
+    @Test
+    void epicStatusMixedNewAndDone() {
+        Epic epic = taskManager.createEpic(new Epic("Epic", ""));
+        Subtask sub1 = new Subtask("S1", "", TaskStatus.NEW, epic.getId());
+        Subtask sub2 = new Subtask("S2", "", TaskStatus.DONE, epic.getId());
+        taskManager.createSubtask(sub1);
+        taskManager.createSubtask(sub2);
+        assertEquals(TaskStatus.IN_PROGRESS, taskManager.getEpic(epic.getId()).getStatus());
+    }
+
+    /**
+     * Проверяет граничный случай: хотя бы одна подзадача в статусе IN_PROGRESS.
+     */
+    @Test
+    void epicStatusInProgress() {
+        Epic epic = taskManager.createEpic(new Epic("Epic", ""));
+        Subtask sub1 = new Subtask("S1", "", TaskStatus.IN_PROGRESS, epic.getId());
+        Subtask sub2 = new Subtask("S2", "", TaskStatus.NEW, epic.getId());
+        taskManager.createSubtask(sub1);
+        taskManager.createSubtask(sub2);
+        assertEquals(TaskStatus.IN_PROGRESS, taskManager.getEpic(epic.getId()).getStatus());
+    }
+
+    /**
+     * Проверяет корректный расчёт продолжительности, startTime и endTime эпика на основе подзадач.
+     */
+    @Test
+    void epicTimesCalculatedCorrectly() {
+        Epic epic = taskManager.createEpic(new Epic("Epic", ""));
+        LocalDateTime start1 = LocalDateTime.of(2025, 1, 1, 10, 0);
+        LocalDateTime start2 = LocalDateTime.of(2025, 1, 1, 12, 0);
+        Subtask sub1 = new Subtask("S1", "", TaskStatus.NEW, epic.getId(),
+                Duration.ofMinutes(30), start1);
+        Subtask sub2 = new Subtask("S2", "", TaskStatus.NEW, epic.getId(),
+                Duration.ofMinutes(45), start2);
+        taskManager.createSubtask(sub1);
+        taskManager.createSubtask(sub2);
+        Epic updated = taskManager.getEpic(epic.getId());
+        assertEquals(Duration.ofMinutes(75), updated.getDuration());
+        assertEquals(start1, updated.getStartTime());
+        assertEquals(start2.plus(Duration.ofMinutes(45)), updated.getEndTime());
+    }
+
+    /**
+     * Проверяет, что при отсутствии подзадач у эпика продолжительность = 0,
+     * startTime и endTime равны null.
+     */
+    @Test
+    void epicTimesShouldBeNullIfNoSubtasks() {
+        Epic epic = taskManager.createEpic(new Epic("Epic", ""));
+        Epic fetched = taskManager.getEpic(epic.getId());
+        assertEquals(Duration.ZERO, fetched.getDuration());
+        assertNull(fetched.getStartTime());
+        assertNull(fetched.getEndTime());
     }
 }

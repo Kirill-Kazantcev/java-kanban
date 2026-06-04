@@ -8,6 +8,8 @@ import tools.TaskStatus;
 
 import java.io.*;
 import java.nio.file.Files;
+import java.time.Duration;
+import java.time.LocalDateTime;
 
 /**
  * Реализация менеджера задач с автоматическим сохранением состояния в файл.
@@ -20,7 +22,7 @@ import java.nio.file.Files;
  * - Использование собственного непроверяемого исключения ManagerSaveException при ошибках ввода-вывода
  *
  * @author Kirill-Kazantcev
- * @version 1.0
+ * @version 2.0
  * @since Sprint 6
  */
 public class FileBackedTaskManager extends InMemoryTaskManager {
@@ -42,7 +44,7 @@ public class FileBackedTaskManager extends InMemoryTaskManager {
      */
     protected void save() {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
-            writer.write("id,type,name,status,description,epic\n");
+            writer.write("id,type,name,status,description,epic,duration,startTime\n");
 
             for (Task task : tasks.values()) {
                 writer.write(toString(task) + "\n");
@@ -61,7 +63,7 @@ public class FileBackedTaskManager extends InMemoryTaskManager {
     }
 
     /**
-     * Преобразует задачу в строку формата CSV.
+     * Преобразует задачу в строку формата CSV с экранированием запятых.
      *
      * @param task задача для преобразования
      * @return строка в формате CSV, представляющая задачу
@@ -74,14 +76,23 @@ public class FileBackedTaskManager extends InMemoryTaskManager {
             epicId = String.valueOf(((Subtask) task).getEpicId());
         }
 
+        String duration = task.getDuration() != null ? String.valueOf(task.getDuration().toMinutes()) : "";
+        String startTime = task.getStartTime() != null ? task.getStartTime().toString() : "";
+
         return String.join(",",
                 String.valueOf(task.getId()),
                 type.name(),
-                task.getTitle(),
+                escapeCommas(task.getTitle()),
                 task.getStatus().name(),
-                task.getDescription(),
-                epicId
+                escapeCommas(task.getDescription()),
+                epicId,
+                duration,
+                startTime
         );
+    }
+
+    private String escapeCommas(String s) {
+        return s.replace(",", "\\,");
     }
 
     @Override
@@ -188,11 +199,13 @@ public class FileBackedTaskManager extends InMemoryTaskManager {
                         Epic epic = manager.epics.get(subtask.getEpicId());
                         if (epic != null) {
                             epic.addSubtaskId(subtask.getId());
-                            // Обновляем статус эпика через метод родителя
-                            manager.updateEpicStatus(epic.getId());
+                            manager.updateEpicParameters(epic.getId());
                         }
                     } else {
                         manager.tasks.put(task.getId(), task);
+                    }
+                    if (task.getStartTime() != null) {
+                        manager.addToPrioritized(task);
                     }
                 }
             }
@@ -212,35 +225,50 @@ public class FileBackedTaskManager extends InMemoryTaskManager {
 
     /**
      * Преобразует строку из файла CSV обратно в объект задачи.
+     * Поддерживает новый формат с duration и startTime.
      *
      * @param value строка в формате CSV
      * @return восстановленный объект Task, Epic или Subtask
      */
     private static Task fromString(String value) {
-        String[] fields = value.split(",");
+        // Разделение с учётом экранированных запятых
+        String[] fields = value.split(",(?=(?:[^\\\\]*\\\\[^\\\\]*)*[^\\\\]*$)", -1);
+        if (fields.length < 7) return null;
         int id = Integer.parseInt(fields[0]);
         TaskType type = TaskType.valueOf(fields[1]);
-        String name = fields[2];
+        String name = unescapeCommas(fields[2]);
         TaskStatus status = TaskStatus.valueOf(fields[3]);
-        String description = fields[4];
+        String description = unescapeCommas(fields[4]);
+        String epicIdStr = fields[5];
+        String durationStr = fields[6];
+        String startTimeStr = fields.length > 7 ? fields[7] : "";
+
+        Duration duration = durationStr.isEmpty() ? Duration.ZERO : Duration.ofMinutes(Long.parseLong(durationStr));
+        LocalDateTime startTime = startTimeStr.isEmpty() ? null : LocalDateTime.parse(startTimeStr);
 
         switch (type) {
             case TASK:
-                Task task = new Task(name, description, status);
+                Task task = new Task(name, description, status, duration, startTime);
                 task.setId(id);
                 return task;
             case EPIC:
                 Epic epic = new Epic(name, description);
                 epic.setId(id);
                 epic.setStatus(status);
+                epic.setDuration(duration);
+                epic.setStartTime(startTime);
                 return epic;
             case SUBTASK:
-                int epicId = Integer.parseInt(fields[5]);
-                Subtask subtask = new Subtask(name, description, status, epicId);
+                int epicId = Integer.parseInt(epicIdStr);
+                Subtask subtask = new Subtask(name, description, status, epicId, duration, startTime);
                 subtask.setId(id);
                 return subtask;
             default:
                 return null;
         }
+    }
+
+    private static String unescapeCommas(String s) {
+        return s.replace("\\,", ",");
     }
 }

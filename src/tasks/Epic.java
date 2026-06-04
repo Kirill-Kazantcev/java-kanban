@@ -2,6 +2,8 @@ package tasks;
 
 import tools.TaskStatus;
 import tools.TaskType;
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -19,6 +21,9 @@ public class Epic extends Task {
     /** Список идентификаторов подзадач, входящих в эпик */
     private final List<Integer> subtaskIds;
 
+    /** Время завершения эпика (расчётное) */
+    private LocalDateTime endTime;
+
     /**
      * Конструктор для создания нового эпика.
      * Статус автоматически устанавливается в NEW.
@@ -29,6 +34,9 @@ public class Epic extends Task {
     public Epic(String title, String description) {
         super(title, description, TaskStatus.NEW);
         this.subtaskIds = new ArrayList<>();
+        this.setDuration(Duration.ZERO);
+        this.setStartTime(null);
+        this.endTime = null;
     }
 
     /**
@@ -68,6 +76,24 @@ public class Epic extends Task {
     }
 
     /**
+     * Возвращает время окончания эпика.
+     *
+     * @return время окончания или null, если подзадач нет
+     */
+    public LocalDateTime getEndTime() {
+        return endTime;
+    }
+
+    /**
+     * Устанавливает время окончания эпика.
+     *
+     * @param endTime новое время окончания
+     */
+    public void setEndTime(LocalDateTime endTime) {
+        this.endTime = endTime;
+    }
+
+    /**
      * Возвращает тип задачи.
      * Для эпика возвращает EPIC.
      *
@@ -92,6 +118,9 @@ public class Epic extends Task {
                 ", description='" + getDescription() + '\'' +
                 ", status=" + getStatus() +
                 ", subtaskIds=" + subtaskIds +
+                ", duration=" + (getDuration() != null ? getDuration().toMinutes() : 0) +
+                ", startTime=" + getStartTime() +
+                ", endTime=" + endTime +
                 '}';
     }
 }

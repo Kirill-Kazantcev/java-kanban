@@ -2,6 +2,8 @@ package tasks;
 
 import tools.TaskStatus;
 import tools.TaskType;
+import java.time.Duration;
+import java.time.LocalDateTime;
 
 /**
  * Класс подзадачи - задачи, относящейся к определённому эпику.
@@ -26,6 +28,15 @@ public class Subtask extends Task {
      */
     public Subtask(String title, String description, TaskStatus status, int epicId) {
         super(title, description, status);
+        this.epicId = epicId;
+    }
+
+    /**
+     * Конструктор для создания подзадачи с продолжительностью и временем старта.
+     */
+    public Subtask(String title, String description, TaskStatus status, int epicId,
+                   Duration duration, LocalDateTime startTime) {
+        super(title, description, status, duration, startTime);
         this.epicId = epicId;
     }
 
@@ -72,6 +83,8 @@ public class Subtask extends Task {
                 ", description='" + getDescription() + '\'' +
                 ", status=" + getStatus() +
                 ", epicId=" + epicId +
+                ", duration=" + (getDuration() != null ? getDuration().toMinutes() : 0) +
+                ", startTime=" + getStartTime() +
                 '}';
     }
 }
