@@ -19,7 +19,7 @@ import java.util.List;
 public class Epic extends Task {
 
     /** Список идентификаторов подзадач, входящих в эпик */
-    private final List<Integer> subtaskIds;
+    private final List<Integer> subtaskIds = new ArrayList<>();
 
     /** Время завершения эпика (расчётное) */
     private LocalDateTime endTime;
@@ -33,7 +33,6 @@ public class Epic extends Task {
      */
     public Epic(String title, String description) {
         super(title, description, TaskStatus.NEW);
-        this.subtaskIds = new ArrayList<>();
         this.setDuration(Duration.ZERO);
         this.setStartTime(null);
         this.endTime = null;
@@ -45,6 +44,9 @@ public class Epic extends Task {
      * @return список ID подзадач
      */
     public List<Integer> getSubtaskIds() {
+        if (subtaskIds == null) {
+            return new ArrayList<>();
+        }
         return new ArrayList<>(subtaskIds);
     }
 
@@ -54,7 +56,7 @@ public class Epic extends Task {
      * @param subtaskId идентификатор подзадачи
      */
     public void addSubtaskId(int subtaskId) {
-        if (!subtaskIds.contains(subtaskId)) {
+        if (subtaskIds != null && !subtaskIds.contains(subtaskId)) {
             subtaskIds.add(subtaskId);
         }
     }
@@ -65,14 +67,18 @@ public class Epic extends Task {
      * @param subtaskId идентификатор подзадачи
      */
     public void removeSubtaskId(int subtaskId) {
-        subtaskIds.remove(Integer.valueOf(subtaskId));
+        if (subtaskIds != null) {
+            subtaskIds.remove(Integer.valueOf(subtaskId));
+        }
     }
 
     /**
      * Очищает список подзадач эпика.
      */
     public void clearSubtaskIds() {
-        subtaskIds.clear();
+        if (subtaskIds != null) {
+            subtaskIds.clear();
+        }
     }
 
     /**
@@ -117,7 +123,7 @@ public class Epic extends Task {
                 ", title='" + getTitle() + '\'' +
                 ", description='" + getDescription() + '\'' +
                 ", status=" + getStatus() +
-                ", subtaskIds=" + subtaskIds +
+                ", subtaskIds=" + (subtaskIds != null ? subtaskIds : "[]") +
                 ", duration=" + (getDuration() != null ? getDuration().toMinutes() : 0) +
                 ", startTime=" + getStartTime() +
                 ", endTime=" + endTime +
